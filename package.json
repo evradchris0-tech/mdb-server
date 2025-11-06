@@ -1,16 +1,13 @@
 {
   "name": "mdb-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "Serveur Express MDB",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "npx nodemon server.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",

@@ -1,13 +1,15 @@
-// ============================================
-// MDB - SERVEUR BACKEND (Node.js + Express)
-// ============================================
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
-require('dotenv').config();
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -72,7 +74,101 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Route pour recevoir les données
+// Route pour recevoir les données d'automatisation (nouvelle route)
+app.post('/automation', (req, res) => {
+    try {
+        const receivedData = req.body;
+        
+        console.log('\n📩 AUTOMATISATION REÇUE');
+        console.log('═══════════════════════════════');
+        console.log('Phone:', receivedData.phone);
+        console.log('Delay:', receivedData.delay);
+        console.log('Level:', receivedData.level);
+        console.log('Withdrawal Amount:', receivedData.withdrawalAmount);
+        console.log('Timestamp:', new Date().toISOString());
+        
+        // Ajouter les données à la liste
+        let allData = loadData();
+        allData.push({
+            type: 'automation',
+            ...receivedData,
+            receivedAt: new Date().toISOString()
+        });
+        
+        // Sauvegarder
+        const saved = saveData(allData);
+        
+        if (saved) {
+            console.log('✓ Données sauvegardées');
+            console.log('Total entrées:', allData.length);
+            console.log('═══════════════════════════════\n');
+            
+            res.status(200).json({ 
+                success: true,
+                message: 'Données d\'automatisation reçues et sauvegardées',
+                dataCount: allData.length,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(500).json({ 
+                error: 'Erreur lors de la sauvegarde' 
+            });
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        res.status(500).json({ 
+            error: 'Erreur serveur: ' + error.message 
+        });
+    }
+});
+
+// Route pour recevoir les données du compte (nouvelle route)
+app.post('/account', (req, res) => {
+    try {
+        const receivedData = req.body;
+        
+        console.log('\n📩 COMPTE REÇU');
+        console.log('═══════════════════════════════');
+        console.log('Phone:', receivedData.phone);
+        console.log('Withdrawal Numbers:', receivedData.withdrawalNumbers);
+        console.log('Timestamp:', new Date().toISOString());
+        
+        // Ajouter les données à la liste
+        let allData = loadData();
+        allData.push({
+            type: 'account',
+            ...receivedData,
+            receivedAt: new Date().toISOString()
+        });
+        
+        // Sauvegarder
+        const saved = saveData(allData);
+        
+        if (saved) {
+            console.log('✓ Données sauvegardées');
+            console.log('Total entrées:', allData.length);
+            console.log('═══════════════════════════════\n');
+            
+            res.status(200).json({ 
+                success: true,
+                message: 'Données de compte reçues et sauvegardées',
+                dataCount: allData.length,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(500).json({ 
+                error: 'Erreur lors de la sauvegarde' 
+            });
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        res.status(500).json({ 
+            error: 'Erreur serveur: ' + error.message 
+        });
+    }
+});
+
+// Route pour recevoir les données (ancienne route)
 app.post('/api/mdb/receive', (req, res) => {
     try {
         const receivedData = req.body;
@@ -88,7 +184,6 @@ app.post('/api/mdb/receive', (req, res) => {
         console.log('═══════════════════════════════');
         console.log('Timestamp:', receivedData.timestamp);
         console.log('IP Client:', req.ip);
-        console.log('Device:', receivedData.deviceInfo?.platform);
         
         // Ajouter les données à la liste
         let allData = loadData();
@@ -172,24 +267,26 @@ app.delete('/api/mdb/data', (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// Servir les fichiers statiques
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============== DÉMARRAGE SERVEUR ==============
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log('\n╔════════════════════════════════════╗');
     console.log('║   🔐 MDB RECEIVER - SERVEUR ACTIF   ║');
     console.log('╚════════════════════════════════════╝');
-    console.log(`\n📡 Serveur en écoute sur: http://localhost:${PORT}`);
+    console.log(`\n📡 Serveur en écoute sur: http://0.0.0.0:${PORT}`);
     console.log(`\n📊 API Endpoints:`);
     console.log(`   GET  /api/health              - État du serveur`);
-    console.log(`   POST /api/mdb/receive          - Recevoir les données`);
-    console.log(`   GET  /api/mdb/data             - Toutes les données`);
-    console.log(`   GET  /api/mdb/data/latest      - 10 dernières entrées`);
-    console.log(`   GET  /api/mdb/export           - Exporter en JSON`);
-    console.log(`   DELETE /api/mdb/data           - Supprimer toutes les données`);
+    console.log(`   POST /automation              - Recevoir automatisation`);
+    console.log(`   POST /account                 - Recevoir compte`);
+    console.log(`   POST /api/mdb/receive         - Recevoir les données`);
+    console.log(`   GET  /api/mdb/data            - Toutes les données`);
+    console.log(`   GET  /api/mdb/data/latest     - 10 dernières entrées`);
+    console.log(`   GET  /api/mdb/export          - Exporter en JSON`);
+    console.log(`   DELETE /api/mdb/data          - Supprimer toutes les données`);
     console.log(`\n📂 Données sauvegardées dans: ${DATA_FILE}`);
     console.log(`\n⏳ En attente de données...\n`);
 });
-
-module.exports = app;
