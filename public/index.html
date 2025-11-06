@@ -1,52 +1,160 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>📊 MDB Receiver Dashboard</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #eee; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; background: #222; }
-    th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-    th { background: #444; }
-    button { margin-top: 15px; padding: 10px 20px; background: #0078d7; border: none; color: white; cursor: pointer; }
-    button:hover { background: #005fa3; }
-  </style>
-</head>
-<body>
-  <h1>📊 MDB Receiver Dashboard</h1>
-  <button onclick="refreshData()">🔄 Actualiser les données</button>
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Timestamp</th>
-        <th>Device</th>
-        <th>Payload</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <head>
+    <meta charset="UTF-8" />
+    <title>📊 MDB Receiver Dashboard</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
 
-  <script>
-    async function refreshData() {
-      const res = await fetch('/api/mdb/data');
-      const json = await res.json();
-      const tableBody = document.querySelector('#dataTable tbody');
-      tableBody.innerHTML = '';
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #0e0e0e;
+        color: #f0f0f0;
+        padding: 20px;
+      }
+      h1 {
+        margin-bottom: 10px;
+      }
+      .buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      button {
+        padding: 10px 20px;
+        background: #0078d7;
+        border: none;
+        color: white;
+        cursor: pointer;
+        border-radius: 6px;
+        font-weight: bold;
+        transition: background 0.2s ease;
+      }
+      button:hover {
+        background: #005fa3;
+      }
+      button.delete {
+        background: #c0392b;
+      }
+      button.delete:hover {
+        background: #922b21;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 10px;
+        background: #1c1c1c;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        border: 1px solid #333;
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #333;
+      }
+      pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        margin: 0;
+      }
+    </style>
+  </head>
 
-      json.data.forEach((item, index) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${index + 1}</td>
-          <td>${item.timestamp || '—'}</td>
-          <td>${item.deviceInfo?.platform || '—'}</td>
-          <td><pre>${JSON.stringify(item, null, 2)}</pre></td>
-        `;
-        tableBody.appendChild(row);
-      });
-    }
+  <body>
+    <h1>📊 MDB Receiver Dashboard</h1>
 
-    refreshData(); // Charger dès le départ
-  </script>
-</body>
+    <div class="buttons">
+      <button onclick="refreshData()">🔄 Actualiser les données</button>
+      <button onclick="downloadJSON()">📥 Télécharger JSON</button>
+      <button class="delete" onclick="deleteAll()">🗑 Supprimer toutes les données</button>
+    </div>
+
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Timestamp</th>
+          <th>Device</th>
+          <th>Payload</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      // 🔄 Récupérer les données et les afficher dans le tableau
+      async function refreshData() {
+        try {
+          const res = await fetch("/api/mdb/data");
+          const json = await res.json();
+          const tableBody = document.querySelector("#dataTable tbody");
+          tableBody.innerHTML = "";
+
+          if (!json.data || json.data.length === 0) {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td colspan="4" style="text-align:center; color:#999;">Aucune donnée disponible</td>`;
+            tableBody.appendChild(row);
+            return;
+          }
+
+          json.data.forEach((item, index) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${index + 1}</td>
+              <td>${item.timestamp || "—"}</td>
+              <td>${item.deviceInfo?.platform || "—"}</td>
+              <td><pre>${JSON.stringify(item, null, 2)}</pre></td>
+            `;
+            tableBody.appendChild(row);
+          });
+        } catch (error) {
+          alert("Erreur lors du chargement des données : " + error.message);
+        }
+      }
+
+      // 📥 Télécharger les données JSON
+      async function downloadJSON() {
+        try {
+          const res = await fetch("/api/mdb/export");
+          const blob = await res.blob();
+
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "mdb_data_export.json";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        } catch (error) {
+          alert("❌ Erreur lors du téléchargement : " + error.message);
+        }
+      }
+
+      // 🗑 Supprimer toutes les données
+      async function deleteAll() {
+        if (!confirm("⚠️ Voulez-vous vraiment supprimer toutes les données ?")) return;
+        try {
+          const res = await fetch("/api/mdb/data", { method: "DELETE" });
+          const json = await res.json();
+          alert(json.message || "Toutes les données ont été supprimées");
+          refreshData();
+        } catch (error) {
+          alert("Erreur lors de la suppression : " + error.message);
+        }
+      }
+
+      // Chargement initial
+      refreshData();
+    </script>
+  </body>
 </html>
