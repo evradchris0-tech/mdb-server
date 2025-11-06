@@ -2,7 +2,7 @@
   "name": "mdb-server",
   "version": "1.0.0",
   "description": "Serveur Express MDB",
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node index.js",
